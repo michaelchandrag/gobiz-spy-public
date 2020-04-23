@@ -3,17 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
-  <title>Second Page &mdash; Fabelio - Test</title>
+  <title>GoBiz Menu</title>
 
   <!-- General CSS Files -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 
   <!-- CSS Libraries -->
-
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+  <link rel="stylesheet" href="/node_modules/datatables.net-bs4/css/dataTables.bootstrap4.min.css">
+  <link rel="stylesheet" href="/node_modules/datatables.net-select-bs4/css/select.bootstrap4.min.css">
+  
   <!-- Template CSS -->
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/components.css">
+  <style>
+    .main-content {
+      padding-left: 30px;
+    }
+  </style>
 </head>
 
 <body>
@@ -21,50 +29,65 @@
   <div id="app">
     <div class="main-wrapper">
       <div class="navbar-bg"></div>
-      <div class="main-sidebar">
-        <aside id="sidebar-wrapper">
-          <div class="sidebar-brand">
-            <a href="/">Fabelio - Test</a>
-          </div>
-          <ul class="sidebar-menu">
-              <li class="active"><a class="nav-link" href="/"><span>Page 1</span></a></li>
-              <li class="active"><a class="nav-link" href="/page2"><span>Page 2</span></a></li>
-          </ul>
-        </aside>
-      </div>
 
       <!-- Main Content -->
       <div class="main-content">
         <section class="section">
           <div class="section-header">
             <h1>Page 2</h1>
+            <br/>
           </div>
           <div class="section-body">
             <div class="card">
               <div class="card-header">
-                <h4>List of Product Available</h4>
+                <div class="buttons">
+                  <button type="button" id="btn-submit-phone-number" onclick="window.location.href='/'" class="btn btn-danger">Go back to page 1</button>
+                </div>
+              </div>
+              <div class="card-body">
+                <p>
+                  <b>Note:</b> <br/>
+                  Start Date akan menggunakan waktu 00:00:00, jika anda memasukkan tanggal 01/01/2020 maka akan diconvert menjadi 01/01/2020 00:00:00 <br/>
+                  End Date akan menggunakan waktu 00:00:00, jika anda memasukkan tanggal 04/01/2020 maka akan diconvert menjadi 04/01/2020 00:00:00 <br/>
+                  Akses data hanya bisa dilakukan sekitar 1-2 jam. Apabila sudah melewati itu lakukan kembali request OTP melalui halaman utama.
+                </p>
+                <div class="form-group">
+                  Start Date :<input type="text" class="form-control" id="start_date" value="01/01/2020"> <br/>
+                  End Date: <input type="text" class="form-control" id="end_date">
+                  <br/>
+                  <div class="buttons">
+                    <button type="button" id="btn-submit-phone-number" onclick="getTransactions()" class="btn btn-primary">Get Transactions!</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="section-body" class="section-transaction">
+            <div class="card">
+              <div class="card-header">
+                <h4></h4>
               </div>
               <div class="card-body">
                 <div class="table-responsive">
-                  <table class="table table-striped" id="table-1">
-                    <thead>
-                      <tr>
-                        <th>Product ID</th>
-                        <th>Title</th>
-                        <th>Description</th>
-                        <th>Price</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody class="list-product">
-                    </tbody>
+                  <table id="my-table" class="display" style="width: 100%;">
+                      <thead>
+                          <tr>
+                              <th>Order At</th>
+                              <th>Order ID</th>
+                              <th>Customer ID</th>
+                              <th>Customer Name</th>
+                              <th>Customer Email</th>
+                              <th>Customer Phone</th>
+                          </tr>
+                      </thead>
+                      <tbody class="my-table-body">
+                      </tbody>
                   </table>
                 </div>
               </div>
             </div>
-          </div>
-
-          <div class="section-body">
           </div>
         </section>
       </div>
@@ -80,37 +103,143 @@
   <script src="/js/stisla.js"></script>
 
   <!-- JS Libraies -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@9"></script>
+  <script src="/node_modules/datatables/media/js/jquery.dataTables.min.js"></script>
+  <script src="/node_modules/datatables.net-bs4/js/dataTables.bootstrap4.min.js"></script>
+  <script src="/node_modules/datatables.net-select-bs4/js/select.bootstrap4.min.js"></script>
+
 
   <!-- Template JS File -->
   <script src="/js/scripts.js"></script>
   <script src="/js/custom.js"></script>
   <script>
-    function toIDCurrency(amount) {
-      return new Intl.NumberFormat('id', {
-                style: 'currency',
-                currency: 'IDR'
-              }).format(amount)
-    }
-
     var BASE_URL
-    var listProducts = {{ .listProducts }}
-    console.log(listProducts)
+    var OTP_TOKEN
     $(document).ready(function () {
+      $('#table_id').DataTable();
       BASE_URL = $("#base-url").val()
       console.log(BASE_URL)
-      $(".list-product").empty()
-      for (var key in listProducts) {
-        var append = '<tr>'
-        append += '<td>' + listProducts[key].product_id + '</td>'
-        append += '<td>' + listProducts[key].detail_latest.title + '</td>'
-        append += '<td>' + listProducts[key].detail_latest.description + '</td>'
-        append += '<td>' + toIDCurrency(listProducts[key].detail_latest.price) + '</td>'
-        append += '<td>' + '<a href="history/' + listProducts[key].product_id + '">History</a>' + '</td>'
-        append += '</tr>'
-        $(".list-product").append(append)
+      var isExistsProfile = false
+      if (localStorage.getItem('gobiz_merchant_id') == undefined || localStorage.getItem('gobiz_merchant_id') == "") {
+        getProfile()
       }
+      $("#start_date").daterangepicker({
+        singleDatePicker: true
+      })
+      $("#end_date").daterangepicker({
+        singleDatePicker: true
+      })
     })
+
+    function getProfile () {
+      var reqBody = {
+        "access_token": localStorage.getItem('gobiz_access_token')
+      }
+      reqBody = JSON.stringify(reqBody)
+      $.ajax({
+        type: "POST",
+        url: BASE_URL + "/request_profile_gobiz",
+        contentType: "application/json",
+        data: reqBody,
+        async: false,
+        beforeSend: function () {
+          Swal.fire({
+            title: 'Please wait!',
+            text: 'Request Profile Merchant to GoBiz',
+            allowOutsideClick: false,
+            showConfirmButton: false
+          })
+        },
+        success: function(response) {
+          var message = ''
+          var title = ''
+          if (response.success == true) {
+            title = 'Success!'
+            message = response.message
+            localStorage.setItem('gobiz_merchant_id', response.response_data.user.merchant_id)
+          } else {
+            title = 'Error!'
+            var errors = response.response_data.errors
+            for (var key in errors) {
+              message += errors[key].message + '. '
+            }
+          }
+          Swal.fire({
+            title: title,
+            text: message
+          })
+        }
+      })
+    }
+
+    function parseISOString(s) {
+      var date = new Date(s)
+      return date.getDate() + '/' + (date.getMonth()+1) + '/' + date.getFullYear()
+    }
+
+    function getTransactions () {
+      var asd = new Date($("#start_date").val())
+
+      var reqBody = {
+        "merchant_id": localStorage.getItem('gobiz_merchant_id'),
+        "access_token": localStorage.getItem('gobiz_access_token'),
+        "start_date": new Date($("#start_date").val()).toISOString(),
+        "end_date": new Date($("#end_date").val()).toISOString()
+      }
+      reqBody = JSON.stringify(reqBody)
+      $.ajax({
+        type: "POST",
+        url: BASE_URL + "/request_transactions_gobiz",
+        contentType: "application/json",
+        data: reqBody,
+        beforeSend: function () {
+          Swal.fire({
+            title: 'Please wait!',
+            text: 'Request Transaction Merchant to GoBiz. This might take a while.',
+            allowOutsideClick: false,
+            showConfirmButton: false
+          })
+        },
+        success: function(response) {
+          var message = ''
+          var title = ''
+          if (response.response_data.errors == undefined) {
+            title = 'Success!'
+            message = response.message
+            $(".my-table-body").empty()
+            var gabung = ''
+            var data = response.response_data
+            for (var key in data) {
+              gabung += '<tr>'
+              gabung += '<td>' + parseISOString(data[key].ordered_at) + '</td>'
+              gabung += '<td>' + data[key].order_id + '</td>'
+              gabung += '<td>' + data[key].customer.customer_id + '</td>'
+              gabung += '<td>' + data[key].customer.customer_name + '</td>'
+              gabung += '<td>' + data[key].customer.customer_phone + '</td>'
+              gabung += '<td>' + data[key].customer.customer_email + '</td>'
+              gabung += '</tr>'
+            }
+            $(".my-table-body").append(gabung)
+            $("#my-table").DataTable()
+
+
+
+          } else {
+            title = 'Error!'
+            var errors = response.response_data.errors
+            for (var key in errors) {
+              message += errors[key].message + '. '
+            }
+          }
+          Swal.fire({
+            title: title,
+            text: message
+          })
+          console.log(response)
+        }
+      })
+    }
 
   </script>
   <!-- Page Specific JS File -->

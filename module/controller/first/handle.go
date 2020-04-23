@@ -1,40 +1,12 @@
 package first
 
 import (
-	"fmt"
 	"os"
 	"net/http"
-	"log"
-	"encoding/json"
-	"strconv"
-	"strings"
+	"fmt"
 
+	gobiz "github.com/michaelchandrag/gobiz-spy/module/util/gobiz"
 	"github.com/gin-gonic/gin"
-	"github.com/PuerkitoBio/goquery"
-
-
-	model "github.com/michaelchandrag/go-my-skeleton/module/model"
-)
-
-type (
-	MagentoGallery struct {
-		DataGallery 	DataGallery 		`json:"[data-gallery-role=gallery-placeholder]"`
-		
-	}
-
-	DataGallery struct {
-		MageGallery 	MageGallery 		`json:"mage/gallery/gallery"`
-	}
-
-	MageGallery struct {
-		Mixins 			[]string 			`json:"mixins"`
-		Data 			[]Data 				`json:"data"`
-	}
-
-	Data struct {
-		Img 			string 				`json:"img"`
-	}
-
 )
 
 func RenderFirstPage (c *gin.Context) {
@@ -45,111 +17,104 @@ func RenderFirstPage (c *gin.Context) {
 	})
 }
 
-func FetchDataFromFabelio (c *gin.Context) {
+func RequestOtpGobiz (c *gin.Context) {
 	type Body struct {
-		Link 	string 	`json:"link"`
+		PhoneNumber 	string 		`json:"phone_number"`
 	}
+
+	var payload Body
+	if err := c.BindJSON(&payload); err != nil {
+		c.JSON(400, gin.H {
+			"success": false,
+			"message": "Body request is not correct.",
+		})
+		return
+	}
+
+	res, err := gobiz.RequestOtp(payload.PhoneNumber)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(400, gin.H{
+			"success": false,
+			"message": "Failed to request OTP.",
+			"error": err,
+			"response_data": res,
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "Success request OTP. A SMS has been sent to your phone number.",
+		"response_data": res,
+	})
+	return
+}
+
+func RequestTokenGobiz (c *gin.Context) {
+	type Body struct {
+		OtpToken 	string 			`json:"otp_token"`
+		Otp 		string 			`json:"otp"`
+	}
+
+	var payload Body
+	if err := c.BindJSON(&payload); err != nil {
+		c.JSON(400, gin.H {
+			"success": false,
+			"message": "Body request is not correct.",
+		})
+		return
+	}
+
+	res, err := gobiz.RequestToken(payload.OtpToken, payload.Otp)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(400, gin.H{
+			"success": false,
+			"message": "Failed to request token.",
+			"error": err,
+			"response_data": res,
+		})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success": true,
+		"message": "Success request token. You are redirected to the main menu option.",
+		"response_data": res,
+	})
+	return
+}
+
+func RequestProfileGobiz (c *gin.Context) {
+	type Body struct {
+		AccessToken 	string 		`json:"access_token"`
+	}
+
 	var payload Body
 	if err := c.BindJSON(&payload); err != nil {
 		c.JSON(400, gin.H{
 			"success": false,
 			"message": "Body request is not correct.",
 		})
-		return
 	}
-	res, err := http.Get(payload.Link)
+
+	res, err := gobiz.RequestProfile(payload.AccessToken)
 	if err != nil {
-	    log.Fatal(err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != 200 {
-	    log.Fatalf("status code error: %d %s", res.StatusCode, res.Status)
-	    c.JSON(400, gin.H{
-	    	"success": false,
-	    	"message": "Load fabelio product failed.",
-	    })
-	    return
-	}
-
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		c.JSON(400, gin.H{
-	    	"success": false,
-	    	"message": "Load fabelio product failed.",
-	    })
-	    return
-	}
-
-	var title string
-	var description string
-	var price string
-	var find string
-	title = doc.Find(".base").Text()
-	description = doc.Find("#description").Text()
-	productId, _ := doc.Find("#productId").Attr("value")
-	newProductId, _ := strconv.Atoi(productId)
-	price, _ = doc.Find(fmt.Sprintf("#product-price-%s", productId)).Attr("data-price-amount")
-	convPrice, _ := strconv.Atoi(price)
-	doc.Find("script").Each( func (i int, s*goquery.Selection) {
-		text := s.Text()
-		if strings.Contains(text, "mage/gallery/gallery") {
-			find = text
-		}
-	})
-	if newProductId <= 0 {
-		c.JSON(400, gin.H{
-	    	"success": false,
-	    	"message": "Load fabelio product failed.",
-	    })
-	    return
-	}
-	var magentoGallery MagentoGallery
-	_ = json.Unmarshal([]byte(find), &magentoGallery)
-
-	var whereProduct model.Product
-	err = whereProduct.FindByProductID(productId) // err means product not found
-	
-	if err != nil {
-		var newProduct model.Product
-		object := model.Product{
-			ProductID: productId,
-			Link: payload.Link,
-		}
-		_, err := newProduct.Create(object)
-		if err != nil {
-			c.JSON(400, gin.H{
-				"success": false,
-				"message": "Something error when create product.",
-			})
-			return
-		}
-	}
-
-	var newDetail model.Detail
-	imagesToJSON, _ := json.Marshal(magentoGallery.DataGallery.MageGallery.Data)
-	object := model.Detail{
-		ProductID: productId,
-		Title: title,
-		Description: description,
-		Price: convPrice,
-		Images: string(imagesToJSON),
-	}
-	resultDetail, err := newDetail.Create(object)
-	if err != nil {
+		fmt.Println(err)
 		c.JSON(400, gin.H{
 			"success": false,
-			"message": "Something error when create detail",
+			"message": "Failed to request profile merchant.",
+			"error": err,
+			"response_data": res,
 		})
 		return
 	}
 
-
-	
 	c.JSON(200, gin.H{
 		"success": true,
-		"detail": resultDetail,
-		"message": "Success fetch fabelio product.",
+		"message": "Success request profile merchant.",
+		"response_data": res,
 	})
 	return
 }

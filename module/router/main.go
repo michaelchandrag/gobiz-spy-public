@@ -3,7 +3,8 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 
-	first "github.com/michaelchandrag/go-my-skeleton/module/controller/first"
+	first "github.com/michaelchandrag/gobiz-spy/module/controller/first"
+	second "github.com/michaelchandrag/gobiz-spy/module/controller/second"
 )
 
 func SetupRouter() *gin.Engine {
@@ -13,9 +14,14 @@ func SetupRouter() *gin.Engine {
 	r.Static("/fonts", "public/assets/fonts")
 	r.Static("/img", "public/assets/img")
 	r.Static("/js", "public/assets/js")
+	r.Static("/node_modules", "public/assets/node_modules")
 
-	r.POST("/fetch_data_from_fabelio", first.FetchDataFromFabelio)
 	r.GET("/", first.RenderFirstPage)
+	r.GET("/page2", second.RenderSecondPage)
+	r.POST("/request_otp_gobiz", first.RequestOtpGobiz)
+	r.POST("/request_token_gobiz", first.RequestTokenGobiz)
+	r.POST("/request_profile_gobiz", first.RequestProfileGobiz)
+	r.POST("/request_transactions_gobiz", second.RequestTransactionsGobiz)
 
 	return r
 }

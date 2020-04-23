@@ -3,17 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no" name="viewport">
-  <title>First Page &mdash; Fabelio - Test</title>
+  <title>Login with OTP Page</title>
 
   <!-- General CSS Files -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
 
   <!-- CSS Libraries -->
-
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
   <!-- Template CSS -->
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/components.css">
+  <style>
+    .main-content {
+      padding-left: 30px;
+    }
+  </style>
 </head>
 
 <body>
@@ -21,17 +26,6 @@
   <div id="app">
     <div class="main-wrapper">
       <div class="navbar-bg"></div>
-      <div class="main-sidebar">
-        <aside id="sidebar-wrapper">
-          <div class="sidebar-brand">
-            <a href="/">Fabelio - Test</a>
-          </div>
-          <ul class="sidebar-menu">
-              <li class="active"><a class="nav-link" href="/"><span>Page 1</span></a></li>
-              <li class="active"><a class="nav-link" href="/page2"><span>Page 2</span></a></li>
-          </ul>
-        </aside>
-      </div>
 
       <!-- Main Content -->
       <div class="main-content">
@@ -42,14 +36,46 @@
           <div class="section-body">
             <div class="card">
               <div class="card-header">
-                <h4>Input Fabelio Product Page</h4>
+                <h4>GoBiz Login with Phone Number</h4>
               </div>
               <div class="card-body">
                 <div class="form-group">
-                  <label>Example: <a href="https://fabelio.com/ip/meja-makan-cessi-white-new.html" target="_blank">https://fabelio.com/ip/meja-makan-cessi-white-new.html</a></label>
-                  <input type="text" class="form-control" id="url"> <br/>
+                  <label>Example: (62) 87821234567 </label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <div class="input-group-text">
+                        (62)
+                      </div>
+                    </div>
+                    <input type="text" class="form-control" id="phone_number" placeholder="87821234567">
+                    <input type="hidden" id="otp-code">
+                  </div><br/>
                   <div class="buttons">
-                    <a onclick="submitLink()" class="btn btn-primary" style="color: white;">Let's go!</a>
+                    <button type="button" id="btn-submit-phone-number" onclick="submitPhoneNumber()" class="btn btn-primary">Let's go!</button>
+                    <!-- <a onclick="submitPhoneNumber()" id="btn-submit-phone-number" class="btn btn-primary" style="color: white;">Let's go!</a> -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" id="otp-card" style="display: none;">
+              <div class="card-header">
+                <h4>Input your OTP Number</h4>
+              </div>
+              <div class="card-body">
+                <div class="form-group">
+                  <label>Example: XXXX (4 Digit)</label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <div class="input-group-text">
+                        OTP
+                      </div>
+                    </div>
+                    <input type="text" class="form-control" id="otp">
+                  </div><br/>
+                  <div class="buttons">
+                    <button type="button" onclick="submitOtp()" class="btn btn-primary">Submit!</button>
+                    <!-- <a onclick="submitOtp()" id="btn-submit-phone-number" class="btn btn-primary" style="color: white;">Submit!</a> -->
                   </div>
                 </div>
               </div>
@@ -79,24 +105,69 @@
   <script src="/js/custom.js"></script>
   <script>
     var BASE_URL
+    var OTP_TOKEN
     $(document).ready(function () {
       BASE_URL = $("#base-url").val()
       console.log(BASE_URL)
+      $("#otp-card").hide()
     })
-    function submitLink () {
+    function submitPhoneNumber () {
       var reqBody = {
-        "link": $("#url").val()
+        "phone_number": $("#phone_number").val()
       }
       reqBody = JSON.stringify(reqBody)
       $.ajax({
         type: "POST",
-        url: BASE_URL + "/fetch_data_from_fabelio",
+        url: BASE_URL + "/request_otp_gobiz",
+        contentType: "application/json",
+        data: reqBody,
+        async: false,
+        beforeSend: function () {
+          Swal.fire({
+            title: 'Please wait!',
+            text: 'Request OTP to GoBiz',
+            allowOutsideClick: false,
+            showConfirmButton: false
+          })
+        },
+        success: function(response) {
+          var message = ''
+          var title = ''
+          if (response.response_data.success == true) {
+            $("#otp-code").val(response.response_data.data.otp_token)
+            title = 'Success!'
+            message = response.message
+            $("#otp-card").show()
+          } else {
+            title = 'Error!'
+            var errors = response.response_data.errors
+            for (var key in errors) {
+              message += errors[key].message + '. '
+            }
+          }
+          Swal.fire({
+            title: title,
+            text: message
+          })
+        }
+      })
+    }
+
+    function submitOtp () {
+      var reqBody = {
+        "otp_token": $("#otp-code").val(),
+        "otp": $("#otp").val()
+      }
+      reqBody = JSON.stringify(reqBody)
+      $.ajax({
+        type: "POST",
+        url: BASE_URL + "/request_token_gobiz",
         contentType: "application/json",
         data: reqBody,
         beforeSend: function () {
           Swal.fire({
             title: 'Please wait!',
-            text: 'Fetching data from Fabelio',
+            text: 'Request Token to GoBiz',
             allowOutsideClick: false,
             showConfirmButton: false
           })
@@ -106,8 +177,26 @@
             title: 'Done!',
             text: response.message
           })
+          var message = ''
+          var title = ''
+          if (response.response_data.success == false) {
+            title = 'Error!'
+            var errors = response.response_data.errors
+            for (var key in errors) {
+              message += errors[key].message + '. '
+            }
+          } else {
+            title = 'Success!'
+            message = response.message
+            localStorage.setItem("gobiz_access_token", response.response_data.access_token)
+            window.location.href = "page2"
+          }
+          Swal.fire({
+            title: title,
+            text: message
+          })
         }
-      });
+      })
     }
 
   </script>
