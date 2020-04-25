@@ -121,9 +121,7 @@
       BASE_URL = $("#base-url").val()
       console.log(BASE_URL)
       var isExistsProfile = false
-      if (localStorage.getItem('gobiz_merchant_id') == undefined || localStorage.getItem('gobiz_merchant_id') == "") {
-        getProfile()
-      }
+      getProfile()
       $("#start_date").daterangepicker({
         singleDatePicker: true
       })

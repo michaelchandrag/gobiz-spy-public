@@ -302,8 +302,8 @@ func RequestTransactions (accessToken string, merchantId string, startDate strin
 		fmt.Println(err)
 		return result, err
 	}
+	
 	defer res.Body.Close()
-
 	json.NewDecoder(res.Body).Decode(&result)
 	return result, nil
 }
